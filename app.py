@@ -3,6 +3,7 @@ from yt_dlp import YoutubeDL
 import os
 import tempfile
 import shutil
+import random
 
 # Page configuration for mobile responsiveness
 st.set_page_config(
@@ -64,6 +65,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Mobile user agents
+MOBILE_USER_AGENTS = [
+    'Mozilla/5.0 (Linux; Android 10; SM-G980F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36'
+]
+
 # Title with mobile-friendly layout
 st.title("🎥 YouTube Video Downloader")
 st.markdown("Paste a YouTube URL below to download the MP4 video directly to your device")
@@ -81,11 +89,17 @@ if st.button("Download Video", use_container_width=True):
         try:
             with st.spinner("⏳ Downloading... This may take a moment"):
                 ydl_opts = {
-                    # Use single format that doesn't require merging
                     'format': 'best[ext=mp4]',
                     'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
                     'quiet': True,
                     'noprogress': True,
+                    'retries': 3,
+                    'http_headers': {
+                        'User-Agent': random.choice(MOBILE_USER_AGENTS),
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Referer': 'https://www.youtube.com/',
+                    }
                 }
 
                 with YoutubeDL(ydl_opts) as ydl:
@@ -96,13 +110,11 @@ if st.button("Download Video", use_container_width=True):
                 with open(filename, 'rb') as f:
                     video_data = f.read()
                 
-                # Get display name without extension
                 display_name = os.path.splitext(os.path.basename(filename))[0]
                 
                 st.success(f"✅ Download complete: {display_name}")
                 st.caption("Tap below to save video to your device")
                 
-                # Download button with mobile-friendly styling
                 st.download_button(
                     label="💾 Save Video",
                     data=video_data,
@@ -116,8 +128,8 @@ if st.button("Download Video", use_container_width=True):
                 st.error("❌ File not found after download")
         except Exception as e:
             st.error(f"❌ Download failed: {str(e)}")
+            st.info("ℹ️ If this keeps happening, try again later or use a different network")
         finally:
-            # Cleanup temporary directory
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 # Mobile-friendly footer
